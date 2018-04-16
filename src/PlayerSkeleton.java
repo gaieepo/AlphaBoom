@@ -1,28 +1,45 @@
+import java.util.OptionalDouble;
+import java.util.stream.IntStream;
+
 public class PlayerSkeleton {
+    private static boolean SHOW_WINDOW = false;
+
     private static final int W_LINES = 0;
     private static final int W_HEIGHT = 1;
     private static final int W_HOLES = 2;
     private static final int W_BUMPINESS = 3;
+    /**
+     * Heuristics (4 parameters), can implement genetic ones with more paras in later phase:
+     * W_LINES: number of full lines before removal
+     * W_HEIGHT: sum of tops
+     * W_HOLES: number of hole blocks, UNDER top only
+     * W_BUMPINESS: unevenness, steepness and bumpiness, plain ground tends to last longer
+     */
     private static final double[] WEIGHTS = {0.510066, -0.760666, -0.35663, -0.184483};
+
 
     /**
      * Fit one block only since no future blocks and no swap buffer
      * currently fixed weight
+     *
+     * can return one-hot index or pair int[], doesn't matter actually
      * TODO: genetic algorithm
      *
      * @param s
      * @param legalMoves
-     * @return picked move
+     * @return picked move in pair int[] form
      */
     public int[] pickMove(State s, int[][] legalMoves) {
+        // each row in legalMoves represents all position variations
+        // there are two columns in each row, representing the column and orientation of the piece
         int[] best = {0, 0};
-        double bestScore = -10000;
+        double bestScore = Integer.MIN_VALUE;
 
         for (int[] legalMove : legalMoves) {
             int[][] field = tryMove(s, legalMove[0], legalMove[1]);
-            double score = -10000;
+            double score = Integer.MIN_VALUE;
             if (field == null) {
-//                System.out.println("Invalid: " + legalMove[0] + ", " + legalMove[1]);
+                // TODO: handle invalid move, now is default 0,0
             } else {
                 score = WEIGHTS[W_LINES] * calculateLines(field) +
                         WEIGHTS[W_HEIGHT] * calculateHeight(field) +
@@ -34,10 +51,9 @@ public class PlayerSkeleton {
                 best = legalMove;
             }
         }
-//        System.out.println("Best Score:" + bestScore);
-//        System.out.println("Best:" + best[0] + "," + best[1]);
         return best;
     }
+
 
     /**
      * steepness
@@ -65,11 +81,9 @@ public class PlayerSkeleton {
         return total;
     }
 
+
     /**
-     * TODO: clear doubts about holes calculation
-     * there are three utterly different implementations
-     * Be Careful!!!
-     * now is counting all non-block even above height
+     * now is counting all non-block below height
      *
      * @param field
      * @return hole count
@@ -108,6 +122,7 @@ public class PlayerSkeleton {
         return total;
     }
 
+
     /**
      * number of full lines without removal
      *
@@ -130,6 +145,7 @@ public class PlayerSkeleton {
         }
         return count;
     }
+
 
     /**
      * Similar to State::makeMove(int, int)
@@ -178,9 +194,12 @@ public class PlayerSkeleton {
         return field_copy;
     }
 
-    public static void main(String[] args) {
+
+    public static void play() {
         State s = new State();
-        new TFrame(s);
+        if (PlayerSkeleton.SHOW_WINDOW) {
+            new TFrame(s);
+        }
         PlayerSkeleton p = new PlayerSkeleton();
         while (!s.hasLost()) {
             s.makeMove(p.pickMove(s, s.legalMoves()));
@@ -193,5 +212,27 @@ public class PlayerSkeleton {
             }
         }
         System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+    }
+
+
+    public static void playMultiple(int n) {
+        OptionalDouble avgScore = IntStream.range(0, n).parallel().map(i -> {
+            State s = new State();
+            if (PlayerSkeleton.SHOW_WINDOW) {
+                new TFrame(s);
+            }
+            PlayerSkeleton p = new PlayerSkeleton();
+            while (!s.hasLost()) {
+                s.makeMove(p.pickMove(s, s.legalMoves()));
+            }
+            return s.getRowsCleared();
+        }).average();
+
+        System.out.println("You have completed " + avgScore.getAsDouble() + " rows.");
+    }
+
+
+    public static void main(String[] args) {
+        PlayerSkeleton.playMultiple(1);
     }
 }
