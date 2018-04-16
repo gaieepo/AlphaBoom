@@ -7,12 +7,29 @@ public class PlayerSkeleton {
 
     //implement this function to have a working system
     public int pickMove(State s, int[][] legalMoves) {
+        // each row in legalMoves represents all position variations
+        // there are two columns in each row, representing the column and orientation of the piece
+        int bestEvaluation = Integer.MIN_VALUE;
+        int bestMove = 0;
 
+        for (int i = 0; i < legalMoves.length; i++) {
+            int[] move = legalMoves[i];
+            int evaluation = evaluateBoard(s, move);
+            if (evaluation > bestEvaluation) {
+                bestEvaluation = evaluation;
+                bestMove = i;
+            }
+        }
+
+        return bestMove;
+    }
+
+    public int evaluateBoard(State s, int[] move) {
         return 0;
     }
 
     public static void main(String[] args) {
-        PlayerSkeleton.playMultiple(5);
+        PlayerSkeleton.playMultiple(1);
     }
 
     public static void play() {
